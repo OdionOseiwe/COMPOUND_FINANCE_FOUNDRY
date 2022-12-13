@@ -28,6 +28,12 @@ contract Controller is ReentrancyGuard, Ownable{
 
     uint256 public constant COLLATERALFACTORMIN = 1e18;
 
+    // 1% fee for borrowing
+    uint256 public constant FEES = 100;
+
+    // 5% AYP
+    uint256 public constant  AYP = 500;
+
     ///////////////////////////////////////////////////////EVENTS//////////////////////////////////////////////////
     event Deposit(address depositor, uint amount, address token);
 
@@ -45,19 +51,20 @@ contract Controller is ReentrancyGuard, Ownable{
     }
 
     function desposit(address token, uint256 amount) external zeroAddress(token) zeroAmount(amount) nonReentrant{
-        require(msg.sender == address(token), "cant call this function");
         if(markets[token]){
             m_accountToTokenDeposits[msg.sender][token] += amount;
             emit Deposit(msg.sender,amount,token);
             bool sent = IERC20(token).transferFrom(msg.sender, address(token), amount);
             require(sent, "failed to sent into contract");
-            IRToken(token).mint(msg.sender, amount);
         }
     }
 
-    function borrow(uint256 amount, address tokenborrow , address tokencollateral) external zeroAddress(tokenborrow) zeroAddress(tokencollateral) zeroAmount(amount) nonReentrant{
-        require(msg.sender == address(tokenborrow), "cant call this function");
 
+
+    function borrow(uint256 amount, address tokenBorrow, address tokenCollateral) external  zeroAddress(tokenCollateral) zeroAddress(tokenBorrow) zeroAmount(amount) nonReentrant{
+        if(markets[tokenBorrow]){
+            
+        }
 
     }
 }

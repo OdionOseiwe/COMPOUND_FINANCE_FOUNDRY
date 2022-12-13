@@ -13,6 +13,8 @@ import "../interface/AggregatorV3Interface.sol";
 contract Controller is ReentrancyGuard, Ownable{
     mapping(address => address) public m_PriceFeed;
 
+    mapping(address => address) public s_tokenToPriceFeed;
+
     mapping(address => bool) markets;
 
     // Account -> Token -> Amount
@@ -72,10 +74,18 @@ contract Controller is ReentrancyGuard, Ownable{
     }
 
     function allowed(address borrower, address tokenBorrow, address tokenCollateral) view private returns(uint256){
-        uint256 collateral = m_accountToTokenDeposits[borrower][tokenBorrow];
+        uint256 collateral = m_accountToTokenDeposits[borrower][tokenCollateral];
         uint maximumBorrow  =  (collateral * LIQUIDATION_THRESHOLD) / 10000;
-        uint UsersBorrows = m_accountToTokenBorrows[borrower][tokenCollateral];
-        return (maximumBorrow * 1e18) / UsersBorrows;
+        uint maxBorrowUSD = getUSDValue(tokenCollateral,maximumBorrow );
+        uint usersBorrows = m_accountToTokenBorrows[borrower][tokenBorrow];
+        uint userBorrowsUSD = getUSDValue(tokenBorrow,usersBorrows );
+        return (maxBorrowUSD * 1e18) / userBorrowsUSD;
+    }
+
+    function getUSDValue(address token, uint256 amount) private view returns (uint256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_tokenToPriceFeed[token]);
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+        return (uint256(price) * amount) / 1e18;
     }
 
 }

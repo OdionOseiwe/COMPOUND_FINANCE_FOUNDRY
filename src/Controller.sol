@@ -36,7 +36,7 @@ contract Controller is ReentrancyGuard, Ownable{
 
     ///////////////////////////////////////////////////////EVENTS//////////////////////////////////////////////////
     event Deposit(address depositor, uint amount, address token);
-
+    event Borrow(address debtor, address tokenAddress, uint256 amount);
 
     /////////////////////////////////////////////////////////MODIFIER/////////////////////////////////////////////
     
@@ -59,14 +59,25 @@ contract Controller is ReentrancyGuard, Ownable{
         }
     }
 
-
-
     function borrow(uint256 amount, address tokenBorrow, address tokenCollateral) external  zeroAddress(tokenCollateral) zeroAddress(tokenBorrow) zeroAmount(amount) nonReentrant{
         if(markets[tokenBorrow]){
-            
+            require(IERC20(tokenBorrow).balanceOf(address(this)) >= amount, "Not enough tokens to borrow");
+            m_accountToTokenBorrows[msg.sender][tokenBorrow] += amount;
+            emit Borrow(msg.sender, tokenBorrow, amount);
+            bool sent = IERC20(tokenBorrow).transfer(msg.sender, amount);
+            require(sent, "failed to send");
+            uint256 allow = allowed(msg.sender,tokenBorrow,tokenCollateral);
+            require(allow > COLLATERALFACTORMIN, "contract will not be balanced");
         }
-
     }
+
+    function allowed(address borrower, address tokenBorrow, address tokenCollateral) view private returns(uint256){
+        uint256 collateral = m_accountToTokenDeposits[borrower][tokenBorrow];
+        uint maximumBorrow  =  (collateral * LIQUIDATION_THRESHOLD) / 10000;
+        uint UsersBorrows = m_accountToTokenBorrows[borrower][tokenCollateral];
+        return (maximumBorrow * 1e18) / UsersBorrows;
+    }
+
 }
 
 interface IRToken{
